@@ -57,7 +57,7 @@ public class CatalogScan extends CatalogRef {
     File absLocation = new File(baseDir, relLocation);
     ConfigCatalog cc = reader.getFromAbsolutePath(absLocation + "/" + filename);
     if (cc == null)
-      logger.warn("Cant find catalog from scan: " + absLocation + "/" + filename);
+      logger.warn("Cant find catalog from scan: " + relLocation + "/" + filename);
     return cc;
   }
 
@@ -69,10 +69,12 @@ public class CatalogScan extends CatalogRef {
 
     // it must be a directory
     Path wantDir = absLocation.toPath();
-    if (!Files.exists(wantDir))
-      throw new FileNotFoundException("Requested catalog does not exist =" + absLocation);
-    if (!Files.isDirectory(wantDir))
-      throw new FileNotFoundException("Not a directory =" + absLocation);
+    if (!Files.exists(wantDir)) {
+      throw new FileNotFoundException("Requested catalog does not exist. URL path = " + relLocation);
+    }
+    if (!Files.isDirectory(wantDir)) {
+      throw new FileNotFoundException("Not a directory. URL path = " + relLocation);
+    }
 
     // Setup and create catalog builder.
     CatalogBuilder catBuilder = new CatalogBuilder();

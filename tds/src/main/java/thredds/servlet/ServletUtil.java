@@ -279,17 +279,19 @@ public class ServletUtil {
    */
   public static void writeMFileToResponse(HttpServletRequest request, HttpServletResponse response, String requestPath)
       throws IOException {
-    final String location = TdsRequestedDataset.getLocationFromRequestPath(requestPath);
+    final String ncmlLocation = TdsRequestedDataset.getLocationFromNcml(requestPath);
+    final String location =
+        ncmlLocation != null ? ncmlLocation : TdsRequestedDataset.getLocationFromRequestPath(requestPath);
     final MFile file = MFiles.create(location);
 
     if (file == null) {
-      response.sendError(HttpServletResponse.SC_NOT_FOUND, "Could not find file: " + location);
+      response.sendError(HttpServletResponse.SC_NOT_FOUND, "Could not find file with URL path: " + requestPath);
       return;
     }
 
     if (file.isDirectory()) {
       response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-          "Expected a file name instead of a directory: " + location);
+          "Expected a file name instead of a directory for URL path: " + requestPath);
       return;
     }
 

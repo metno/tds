@@ -5,14 +5,14 @@
 
 package thredds.server.catalog;
 
-import org.junit.Assert;
+import static com.google.common.truth.Truth.assertThat;
+
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import thredds.client.catalog.*;
 import ucar.unidata.util.test.category.NeedsCdmUnitTest;
-import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 
@@ -21,84 +21,84 @@ public class TestTdsDatasetScan {
   private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   @Test
-  public void testSort() throws IOException {
+  public void testSort() {
     Catalog cat = TdsLocalCatalog.open("catalog/scanCdmUnitTests/tds/ncep/catalog.xml");
 
     Dataset last = null;
     for (Dataset ds : cat.getDatasetsLocal()) {
       if (last != null)
-        assert ds.getName().compareTo(last.getName()) > 0;
+        assertThat(ds.getName().compareTo(last.getName())).isGreaterThan(0);
       last = ds;
     }
   }
 
   @Test
-  public void testDatasetScanForLatest() throws IOException {
+  public void testDatasetScanForLatest() {
     Catalog parent = TdsLocalCatalog.open("catalog/testGridScan/catalog.xml");
     Service latestService = parent.findService("Resolver");
-    Assert.assertNotNull(latestService);
+    assertThat(latestService).isNotNull();
 
     List<Dataset> topDatasets = parent.getDatasetsLocal();
-    Assert.assertEquals(1, topDatasets.size());
+    assertThat(topDatasets.size()).isEqualTo(1);
     Dataset topDataset = topDatasets.get(0);
 
     List<Dataset> dss = topDataset.getDatasetsLocal();
-    Assert.assertTrue(dss.size() > 0);
+    assertThat(dss.size()).isGreaterThan(0);
 
     Dataset latestDataset = topDataset.findDatasetByName("latest.xml");
-    Assert.assertNotNull(latestDataset);
+    assertThat(latestDataset).isNotNull();
     Access latestAccess = latestDataset.getAccess(ServiceType.Resolver);
-    Assert.assertNotNull(latestAccess);
-    Assert.assertEquals(latestService, latestAccess.getService());
+    assertThat(latestAccess).isNotNull();
+    assertThat(latestAccess.getService()).isEqualTo(latestService);
   }
 
   @Test
-  public void testLatestResolver() throws IOException {
+  public void testLatestResolver() {
     Catalog cat = TdsLocalCatalog.open("catalog/testGridScan/latest.xml");
 
     List<Dataset> dss = cat.getDatasetsLocal();
-    assert (dss.size() == 1);
+    assertThat(dss.size()).isEqualTo(1);
 
     Dataset ds = dss.get(0);
-    assert ds.hasAccess();
-    assert ds.getDatasetsLocal().size() == 0;
+    assertThat(ds.hasAccess()).isTrue();
+    assertThat(ds.getDatasetsLocal().size()).isEqualTo(0);
 
-    assert ds.getID() != null;
-    assert ds.getDataSize() > 0.0;
-    assert ds.getId().endsWith("GFS_CONUS_80km_20120229_1200.grib1");;
+    assertThat(ds.getID()).isNotNull();
+    assertThat(ds.getDataSize()).isGreaterThan(0);
+    assertThat(ds.getID()).endsWith("GFS_CONUS_80km_20120229_1200.grib1");
   }
 
   @Test
-  public void testHarvest() throws IOException {
+  public void testHarvest() {
     Catalog cat = TdsLocalCatalog.open("catalog/testEnhanced/catalog.xml");
-    assert cat != null;
+    assertThat(cat).isNotNull();
     List<Dataset> topList = cat.getDatasetsLocal();
-    assert topList.size() == 1;
+    assertThat(topList.size()).isEqualTo(1);
     Dataset top = topList.get(0);
-    assert top != null;
-    assert top.isHarvest();
+    assertThat(top).isNotNull();
+    assertThat(top.isHarvest()).isTrue();
 
     List<Dataset> dss = top.getDatasetsLocal();
-    assert (dss.size() > 0);
+    assertThat(dss.size()).isGreaterThan(0);
     Dataset nested = dss.get(0);
-    assert !nested.isHarvest();
+    assertThat(nested.isHarvest()).isFalse();
 
     cat = TdsLocalCatalog.open("/catalog.xml");
     Dataset ds = cat.findDatasetByID("testDataset");
-    assert ds != null;
-    assert !ds.isHarvest();
+    assertThat(ds).isNotNull();
+    assertThat(ds.isHarvest()).isFalse();
   }
 
   @Test
-  public void testNestedDirs() throws IOException {
+  public void testNestedDirs() {
     Catalog cat = TdsLocalCatalog.open("catalog/station/profiler/wind/06min/catalog.xml");
 
     List<Dataset> topList = cat.getDatasetsLocal();
-    assert topList.size() == 1;
+    assertThat(topList.size()).isEqualTo(1);
     Dataset top = topList.get(0);
-    assert top != null;
+    assertThat(top).isNotNull();
     List<Dataset> children = top.getDatasetsLocal();
-    Assert.assertEquals(3, children.size()); // latest + 2
+    assertThat(children.size()).isEqualTo(3); // latest + 2
   }
 
   /*
@@ -139,15 +139,15 @@ public class TestTdsDatasetScan {
    */
 
   @Test
-  public void testEncodingWithBlanks() throws IOException {
+  public void testEncodingWithBlanks() {
     Catalog cat = TdsLocalCatalog.open("catalog/scanCdmUnitTests/encoding/catalog.xml");
 
     List<Dataset> ds = cat.getDatasetsLocal();
-    assert ds.size() == 1;
+    assertThat(ds.size()).isEqualTo(1);
     Dataset top = ds.get(0);
 
     List<Dataset> children = top.getDatasetsLocal();
-    assert children.size() == 3 : children.size();
+    assertThat(children.size()).isEqualTo(3);
   }
 
   //////////////////////////////////////////////////////
@@ -155,22 +155,22 @@ public class TestTdsDatasetScan {
 
 
   @Test
-  public void testGlobalServices() throws IOException {
+  public void testGlobalServices() {
     String catalog = "/catalog/testStationScan.v5/catalog.xml"; // serviceName ="all" from root catalog
     Catalog cat = TdsLocalCatalog.open(catalog);
 
     Dataset top = cat.getDatasetsLocal().get(0);
-    Assert.assertTrue(!top.hasAccess());
+    assertThat(top.hasAccess()).isFalse();
     Service orgServices = cat.findService("all");
-    Assert.assertNotNull(orgServices);
-    Assert.assertEquals(ServiceType.Compound, orgServices.getType());
-    Assert.assertNotNull(orgServices.getNestedServices());
-    Assert.assertEquals(11, orgServices.getNestedServices().size()); // has 11 services
+    assertThat(orgServices).isNotNull();
+    assertThat(orgServices.getType()).isEqualTo(ServiceType.Compound);
+    assertThat(orgServices.getNestedServices()).isNotNull();
+    assertThat(orgServices.getNestedServices().size()).isEqualTo(11);
     boolean hasFileServer = false;
     for (Service sn : orgServices.getNestedServices())
       if (ServiceType.HTTPServer == sn.getType())
         hasFileServer = true;
-    Assert.assertTrue(hasFileServer);
+    assertThat(hasFileServer).isTrue();
   }
 
 }

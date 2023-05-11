@@ -170,9 +170,12 @@ public class AdminCollectionController implements InitializingBean {
       showFeatureCollection(out, want);
 
       String uriParam = Escape.uriParam(want.getCollectionName());
-      String url = tdsContext.getContextPath() + PATH + "/" + TRIGGER + "?" + COLLECTION + "=" + uriParam + "&"
-          + TRIGGER + "=" + CollectionUpdateType.nocheck;
-      out.format("<p/><a href='%s'>Send trigger to %s</a>%n", url, Escape.html(want.getCollectionName()));
+      String url =
+          tdsContext.getContextPath() + PATH + "/" + TRIGGER + "?" + COLLECTION + "=" + uriParam + "&" + TRIGGER + "=";
+      out.format("<p/><a href='%s'>Send 'nocheck' trigger to %s</a>%n", url + CollectionUpdateType.nocheck,
+          Escape.html(want.getCollectionName()));
+      out.format("<p/><a href='%s'>Send 'test' trigger to %s</a>%n", url + CollectionUpdateType.test,
+          Escape.html(want.getCollectionName()));
 
       String url2 = tdsContext.getContextPath() + PATH + "/" + DOWNLOAD + "?" + COLLECTION + "=" + uriParam;
       out.format("<p/><a href='%s'>Download index file for %s</a>%n", url2, Escape.html(want.getCollectionName()));
@@ -193,7 +196,7 @@ public class AdminCollectionController implements InitializingBean {
 
     for (FeatureCollectionRef fc : fcList) {
       String uriParam = Escape.uriParam(fc.getCollectionName());
-      String url = tdsContext.getContextPath() + PATH + "?" + COLLECTION + "=" + uriParam;
+      String url = tdsContext.getContextPath() + PATH + "/" + SHOW_COLLECTION + "?" + COLLECTION + "=" + uriParam;
       out.format("<p/><a href='%s'>%s</a> (%s)%n", url, fc.getCollectionName(), fc.getName());
       InvDatasetFeatureCollection fcd = datasetManager.openFeatureCollection(fc);
 

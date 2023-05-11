@@ -5,6 +5,9 @@
 
 package thredds.server.ncss.controller.point;
 
+import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assume.assumeTrue;
+
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -28,9 +31,9 @@ import thredds.mock.web.MockTdsContextLoader;
 import thredds.server.ncss.exception.FeaturesNotFoundException;
 import thredds.server.ncss.format.SupportedFormat;
 import thredds.util.ContentType;
+import ucar.nc2.ffi.netcdf.NetcdfClibrary;
 import ucar.unidata.util.test.category.NeedsCdmUnitTest;
 import java.lang.invoke.MethodHandles;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test ncss on station feature collections
@@ -48,7 +51,7 @@ public class TestStationFCController {
   @Autowired
   private WebApplicationContext wac;
 
-  private String dataset = "/ncss/point/testStationFeatureCollection/Metar_Station_Data_fc.cdmr";
+  private static final String dataset = "/ncss/point/testStationFeatureCollection/Metar_Station_Data_fc.cdmr";
   private MockMvc mockMvc;
 
   @Before
@@ -58,6 +61,8 @@ public class TestStationFCController {
 
   @Test
   public void getClosestStationData() throws Exception {
+    skipTestIfNetCDF4NotPresent();
+
     long start = System.currentTimeMillis();
     RequestBuilder rb = MockMvcRequestBuilders.get(dataset).servletPath(dataset).param("longitude", "-105.203")
         .param("latitude", "40.019").param("accept", "netcdf4").param("time_start", "2006-03-028T00:00:00Z")
@@ -69,7 +74,7 @@ public class TestStationFCController {
           .andExpect(MockMvcResultMatchers.content().contentType(SupportedFormat.NETCDF4.getMimeType()));
     } finally {
       long took = System.currentTimeMillis() - start;
-      System.out.printf("that took %d msecs%n", took);
+      logger.debug("that took {} msecs", took);
     }
   }
 
@@ -105,8 +110,8 @@ public class TestStationFCController {
         .param("time_end", "2013-08-26T06:00:00Z");
 
     org.springframework.test.web.servlet.MvcResult result =
-        this.mockMvc.perform(rb).andExpect(MockMvcResultMatchers.status().is(400)).andReturn();
-    System.out.printf("%s%n", result.getResponse().getContentAsString());
+        this.mockMvc.perform(rb).andExpect(MockMvcResultMatchers.status().isBadRequest()).andReturn();
+    logger.debug(result.getResponse().getContentAsString());
   }
 
   @Test
@@ -134,7 +139,7 @@ public class TestStationFCController {
           .andExpect(MockMvcResultMatchers.content().contentType(ContentType.netcdf.getContentHeader()));
     } finally {
       long took = System.currentTimeMillis() - start;
-      System.out.printf("that took %d msecs%n", took);
+      logger.debug("that took {} msecs", took);
     }
 
   }
@@ -149,7 +154,7 @@ public class TestStationFCController {
       public void match(MvcResult result) throws Exception {
         // result.getResponse().getContentAsByteArray()
         Exception ex = result.getResolvedException();
-        assertTrue(ex instanceof FeaturesNotFoundException);
+        assertThat(ex).isInstanceOf(FeaturesNotFoundException.class);
       }
     });
   }
@@ -160,8 +165,11 @@ public class TestStationFCController {
         .param("latitude", "40.019").param("accept", "netcdf") //
         .param("var", "air_temperature", "dew_point_temperature");
 
-    this.mockMvc.perform(rb).andExpect(MockMvcResultMatchers.status().is(400));
+    this.mockMvc.perform(rb).andExpect(MockMvcResultMatchers.status().isBadRequest());
   }
 
+  private static void skipTestIfNetCDF4NotPresent() {
+    assumeTrue(NetcdfClibrary.isLibraryPresent());
+  }
 }
 

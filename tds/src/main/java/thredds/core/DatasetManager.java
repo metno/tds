@@ -114,6 +114,11 @@ public class DatasetManager implements InitializingBean {
     return dataRootManager.getLocationFromRequestPath(reqPath);
   }
 
+  public String getLocationFromNcml(String reqPath) {
+    final String ncml = datasetTracker.findNcml(reqPath);
+    return ncml != null ? NcmlReader.getLocationFromNcml(ncml) : null;
+  }
+
   public static boolean isLocationObjectStore(String location) {
     return location != null ? (location.startsWith("cdms3:") || location.startsWith("s3:")) : false;
   }
@@ -343,8 +348,15 @@ public class DatasetManager implements InitializingBean {
       } else {
         ncd = NetcdfDataset.wrap(ncfile, NetcdfDataset.getDefaultEnhanceMode());
       }
-      return (FeatureDatasetPoint) FeatureDatasetFactoryManager.wrap(FeatureType.ANY_POINT, ncd, null, errlog);
 
+      final FeatureDatasetPoint featureDatasetPoint =
+          (FeatureDatasetPoint) FeatureDatasetFactoryManager.wrap(FeatureType.ANY_POINT, ncd, null, errlog);
+
+      if (featureDatasetPoint != null) {
+        return featureDatasetPoint;
+      } else {
+        throw new UnsupportedOperationException("Could not open as a PointDataset: " + errlog);
+      }
     } catch (Throwable t) {
       if (ncd == null)
         ncfile.close();
@@ -353,6 +365,10 @@ public class DatasetManager implements InitializingBean {
 
       if (t instanceof IOException)
         throw (IOException) t;
+
+      if (t instanceof UnsupportedOperationException) {
+        throw (UnsupportedOperationException) t;
+      }
 
       String msg = ncd == null ? "Problem wrapping NetcdfFile in NetcdfDataset; "
           : "Problem calling FeatureDatasetFactoryManager; ";
@@ -375,9 +391,22 @@ public class DatasetManager implements InitializingBean {
     if (!resourceControlOk(req, res, reqPath))
       return null;
 
-    DataRootManager.DataRootMatch match = dataRootManager.findDataRootMatch(reqPath);
+    // if ncml, must handle specially.
+    // check this before checking for a datasetRoot or featureCollection,
+    // since the urlPath doesn't need to point to a file if there is ncml
+    String ncml = datasetTracker.findNcml(reqPath);
+    if (ncml != null) {
+      Optional<FeatureDatasetCoverage> opt = CoverageDatasetFactory.openNcmlString(ncml);
+      if (!opt.isPresent())
+        throw new FileNotFoundException("NcML is not a Grid Dataset " + reqPath + " err=" + opt.getErrorMessage());
 
-    // first look for a feature collection
+      if (log.isDebugEnabled())
+        log.debug("  -- DatasetHandler found FeatureCollection from NcML");
+      return opt.get().getSingleCoverageCollection();
+    }
+
+    // then look for a feature collection
+    DataRootManager.DataRootMatch match = dataRootManager.findDataRootMatch(reqPath);
     if ((match != null) && (match.dataRoot.getFeatureCollection() != null)) {
       FeatureCollectionRef featCollection = match.dataRoot.getFeatureCollection();
       if (log.isDebugEnabled())
@@ -390,9 +419,8 @@ public class DatasetManager implements InitializingBean {
       return gds;
     }
 
-    // otherwise assume its a local file
-
-    // try to open as a FeatureDatasetCoverage. This allows GRIB to be handle specially
+    // otherwise, assume it's a local file with a datasetRoot in the urlPath.
+    // try to open as a FeatureDatasetCoverage. This allows GRIB to be handled specially
     String location = getLocationFromRequestPath(reqPath);
     if (location != null) {
       Optional<FeatureDatasetCoverage> opt = CoverageDatasetFactory.openCoverageDataset(location);
@@ -413,25 +441,11 @@ public class DatasetManager implements InitializingBean {
       }
 
       if (!opt.isPresent())
-        throw new FileNotFoundException("Not a Grid Dataset " + reqPath + " err=" + opt.getErrorMessage());
+        throw new FileNotFoundException("Error opening grid dataset " + reqPath + ". err=" + opt.getErrorMessage());
 
       if (log.isDebugEnabled())
         log.debug("  -- DatasetHandler found FeatureCollection from file= " + location);
       return opt.get().getSingleCoverageCollection(); // LOOK doesnt have to be single, then what is the URL?
-    }
-
-    // if ncml, must handle special, otherwise we're out of options for opening
-    // a coverage collection.
-
-    String ncml = datasetTracker.findNcml(reqPath);
-    if (ncml != null) {
-      Optional<FeatureDatasetCoverage> opt = CoverageDatasetFactory.openNcmlString(ncml);
-      if (!opt.isPresent())
-        throw new FileNotFoundException("NcML is not a Grid Dataset " + reqPath + " err=" + opt.getErrorMessage());
-
-      if (log.isDebugEnabled())
-        log.debug("  -- DatasetHandler found FeatureCollection from NcML");
-      return opt.get().getSingleCoverageCollection();
     }
 
     return null;

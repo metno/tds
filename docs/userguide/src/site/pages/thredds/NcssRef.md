@@ -59,7 +59,7 @@ Example Point Dataset document:
 ## Subsetting Parameters For NCSS
 
 * [Grid datasets](ncss_grid.html)
-* [Point and Station (Discrete Sampling Geometry) datasets](ncss_point)
+* [Point and Station (Discrete Sampling Geometry) datasets](ncss_point.html)
 
 ### Variable Subsetting
 
@@ -93,8 +93,8 @@ If none, return the time closest to the present.
 #### Output Format (`accept` Parameter)
 * `csv`: Comma-separated values, one feature per line
 * `xml`: Collection of feature elements
-* `netCDF`: CF/NetCDF-3
-* `netCDF4`: CF/NetCDF-4 classic model
+* `netCDF` or `netCDF3`: CF/NetCDF-3
+* `netCDF4` or `netCDF4-classic`: CF/NetCDF-4 classic model
 * `netCDF4ext`: NetCDF-4 extended model
 * `WaterML2`: OGC WaterML 2.0 Timeseries (station only)
 
@@ -238,12 +238,12 @@ Where:
 
 |  `{host}`                | = | server name, e.g., `thredds.ucar.edu` |
 |  `{context}`             | = | `thredds` (usually) |
-|  `{service}`             | = | `ncss/grid` or `ncss/point`, depending on if the dataset has feature type GRID or one of the Point types. |
+|  `{service}`             | = | `ncss/grid` or `ncss/point`, depending on if the dataset has feature type Grid or one of the Point types. |
 |  `{dataset}`             | = | logical path for the dataset, obtained from the catalog. |
 |  `{description}`         | = | `dataset.[xml\|html]` or  `pointDataset.[xml\|html]`  or `datasetBoundaries.xml`  or `stations.xml`. |
-|  `dataset.[xml\|html]`    | = | the dataset description in `XML` or as a web form (Point or GRID). |
+|  `dataset.[xml\|html]`    | = | the dataset description in `XML` or as a web form (Point or Grid). |
 |  `pointDataset.[xml\|html]` | = | the grid-as-point or the point dataset description in `XML` or as a web form. |
-|  `datasetBoundaries.xml`  | = | the description of the bounding boxes for GRID datasets. |
+|  `datasetBoundaries.xml`  | = | the description of the bounding boxes for Grid datasets. |
 |  `station.xml`            | = | the list of valid stations for a station dataset. |
 |  `{query}`                | = | the `KVP`s to describe the subset that you want (see below for valid combinations). |
 
