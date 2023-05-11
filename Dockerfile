@@ -39,6 +39,8 @@ RUN apk update && \
       fontconfig \
       openjdk11-jre \
       openssl \
+      netcdf-dev \
+      netcdf-utils \
       tomcat-native \
       ttf-dejavu \
       tzdata \
