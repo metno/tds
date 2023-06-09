@@ -23,7 +23,7 @@ RUN chmod 777 /usr/local/tomcat/content
 FROM docker.io/alpine:${ALPINE_VERSION}
 # Build tomcat
 ARG TOMCAT_MAJOR=9
-ARG TOMCAT_VERSION=9.0.75
+ARG TOMCAT_VERSION=9.0.76
 ENV CATALINA_OPTS="--illegal-access=permit --add-exports java.base/jdk.internal.ref=ALL-UNNAMED" \
     JAVA_OPTS="-server -Djava.awt.headless=true -Djava.util.prefs.systemRoot=/usr/local/tomcat/.java -Djava.util.prefs.userRoot=/usr/local/tomcat/.java/.userPrefs" \
     CATALINA_HOME=/usr/local/tomcat \
