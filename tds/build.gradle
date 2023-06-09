@@ -30,14 +30,12 @@ dependencies {
   implementation project(':tds-ugrid')
 
   // DAP4 Dependencies (technically forward)
-  compile 'edu.ucar:d4cdm'
-  compile 'edu.ucar:d4core'
-  compile 'edu.ucar:d4lib'
-
-  compile project(':dap4:dap4-servlet')
+  compile 'edu.ucar:dap4'
+//
+//  compile project(':dap4:dap4-servlet')
 
   // Server stuff
-  providedCompile "javax.servlet:javax.servlet-api:${depVersion.javaxServletApi}"
+  providedCompile "jakarta.servlet:jakarta.servlet-api:${depVersion.javaxServletApi}"
   runtime 'org.apache.taglibs:taglibs-standard-spec'
   runtime 'org.apache.taglibs:taglibs-standard-impl'
 
@@ -85,19 +83,17 @@ dependencies {
   'org.json:json'
 
   // JSR 303 with Hibernate Validator, which is dragging in jboss logging
-  compile 'javax.validation:validation-api'
   runtime 'org.hibernate.validator:hibernate-validator'
-  runtime 'javax.el:javax.el-api'
   runtime 'org.glassfish:javax.el'
   annotationProcessor "org.hibernate.validator:hibernate-validator-annotation-processor:${depVersion.hibernateValidator}"
 
   // @Resource annotation (removed post Java 8)
-  compile 'javax.annotation:javax.annotation-api'
+  compile 'jakarta.annotation:jakarta.annotation-api'
 
   compile 'org.thymeleaf:thymeleaf-spring5'
 
   // Testing
-  testCompile "javax.servlet:javax.servlet-api:${depVersion.javaxServletApi}"
+  testCompile "jakarta.servlet:jakarta.servlet-api:${depVersion.javaxServletApi}"
   testCompile 'org.springframework:spring-test'
   testCompile 'org.hamcrest:hamcrest-core'
   testCompile 'commons-io:commons-io'

@@ -201,6 +201,12 @@ public class TestNcssParams {
 
   }
 
+  @Test
+  public void testNoParams() {
+    NcssGridParamsBean params = new NcssGridParamsBean();
 
+    Set<ConstraintViolation<NcssGridParamsBean>> constraintViolations = validator.validate(params);
+    assertEquals(1, constraintViolations.size());
+  }
 
 }
