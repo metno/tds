@@ -1,4 +1,4 @@
-ARG ALPINE_VERSION=3.17.3
+ARG ALPINE_VERSION=3.18.3
 ARG UBUNTU_VERSION=22.04
 
 FROM docker.io/ubuntu:${UBUNTU_VERSION} as build
@@ -23,7 +23,7 @@ RUN chmod 777 /usr/local/tomcat/content
 FROM docker.io/alpine:${ALPINE_VERSION}
 # Build tomcat
 ARG TOMCAT_MAJOR=9
-ARG TOMCAT_VERSION=9.0.76
+ARG TOMCAT_VERSION=9.0.80
 ENV CATALINA_OPTS="--illegal-access=permit --add-exports java.base/jdk.internal.ref=ALL-UNNAMED" \
     JAVA_OPTS="-server -Djava.awt.headless=true -Djava.util.prefs.systemRoot=/usr/local/tomcat/.java -Djava.util.prefs.userRoot=/usr/local/tomcat/.java/.userPrefs" \
     CATALINA_HOME=/usr/local/tomcat \
