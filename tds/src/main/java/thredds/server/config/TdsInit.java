@@ -299,7 +299,7 @@ public class TdsInit implements ApplicationListener<ContextRefreshedEvent>, Disp
 
     if (Nc4Iosp.isClibraryPresent()) { // NetCDF-4 lib could be set as an environment variable or as a JVM parameter.
       FormatsAvailabilityService.setFormatAvailability(SupportedFormat.NETCDF4, true);
-      // FormatsAvailabilityService.setFormatAvailability(SupportedFormat.NETCDF4EXT, true);
+      FormatsAvailabilityService.setFormatAvailability(SupportedFormat.NETCDF4EXT, true);
     }
 
     // how to choose the typical dataset ?
@@ -436,6 +436,7 @@ public class TdsInit implements ApplicationListener<ContextRefreshedEvent>, Disp
     String trackerDir = ThreddsConfig.get("ConfigCatalog.dir",
         new File(tdsContext.getThreddsDirectory().getPath(), "/cache/catalog/").getPath());
     int trackerMax = ThreddsConfig.getInt("ConfigCatalog.maxDatasets", 10 * 1000);
+    String datasetTrackerAverageValueSize = ThreddsConfig.get("ConfigCatalog.averageValueSize", null);
     File trackerDirFile = new File(trackerDir);
     if (!trackerDirFile.exists()) {
       boolean ok = trackerDirFile.mkdirs();
@@ -443,6 +444,7 @@ public class TdsInit implements ApplicationListener<ContextRefreshedEvent>, Disp
     }
     configCatalogInitializer.setTrackerDir(trackerDir);
     configCatalogInitializer.setMaxDatasetToTrack(trackerMax);
+    configCatalogInitializer.setDatasetTrackerAverageValueSize(datasetTrackerAverageValueSize);
 
     // Jupyter notebook service cache
     if (allowedServices.isAllowed(StandardService.jupyterNotebook)) {

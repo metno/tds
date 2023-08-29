@@ -104,8 +104,7 @@ public class NcssGridController extends AbstractNcssController {
 
   private void handleRequestGrid(HttpServletResponse res, NcssGridParamsBean params, String datasetPath,
       CoverageCollection gcd) throws IOException, NcssException, InvalidRangeException {
-    // Supported formats are netcdf3 (default) and netcdf4ext (not currently turned on in TdsInit), netcdf4 (turned
-    // on in TdsInit if C library is present)
+    // Supported formats are netcdf3 (default) and netcdf4ext/ netcdf4 (turned on in TdsInit if C library is present)
     SupportedFormat sf = SupportedOperation.GRID_REQUEST.getSupportedFormat(params.getAccept());
     NetcdfFileFormat version = getNetcdfFileFormat(sf);
 
@@ -159,7 +158,7 @@ public class NcssGridController extends AbstractNcssController {
   }
 
   private File makeCFNetcdfFile(CoverageCollection gcd, String responseFilename, NcssGridParamsBean params,
-      NetcdfFileFormat version) throws InvalidRangeException, IOException {
+      NetcdfFileFormat version) throws InvalidRangeException, IOException, NcssException {
     SubsetParams subset = params.makeSubset(gcd);
 
     // Test maxFileDownloadSize
@@ -175,7 +174,11 @@ public class NcssGridController extends AbstractNcssController {
         CFGridCoverageWriter.write(gcd, params.getVar(), subset, params.isAddLatLon(), writerb, maxFileDownloadSize);
 
     if (!result.wasWritten()) {
-      throw new RequestTooLargeException(result.getErrorMessage());
+      String errorMessage = result.getErrorMessage();
+      if (errorMessage.equals(CFGridCoverageWriter.TOO_LARGE_MESSAGE)) {
+        throw new RequestTooLargeException(result.sizeToBeWritten(), maxFileDownloadSize);
+      }
+      throw new NcssException(errorMessage);
     }
 
     return new File(responseFilename);
