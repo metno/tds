@@ -9,13 +9,15 @@ import dap4.core.util.*;
 import dap4.dap4lib.DapProtocol;
 import dap4.dap4lib.RequestMode;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+
+import org.apache.commons.lang3.StringEscapeUtils;
 
 /**
  * Generate the DSR for a dataset.
@@ -132,6 +134,8 @@ public class DapDSR {
   }
 
   protected void substitute(StringBuilder buf, String macro, String value) {
+    value = StringEscapeUtils.escapeHtml4(value);
+
     int from = 0;
     String tag = "${" + macro + "}";
     int taglen = tag.length();

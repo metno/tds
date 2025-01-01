@@ -19,8 +19,8 @@ import thredds.util.filesource.DescendantFileSource;
 import thredds.util.filesource.FileSource;
 import ucar.nc2.util.IO;
 import ucar.unidata.util.StringUtil2;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletContext;
 import java.io.File;
 import java.io.IOException;
 import java.util.Formatter;
@@ -223,6 +223,9 @@ public final class TdsContext implements ServletContextAware, InitializingBean, 
         throw new IllegalStateException(msg);
       }
     }
+
+    // set configDir for use by the godiva3 config servlet
+    servletContext.setAttribute("configDir", this.threddsDirectory.getAbsolutePath());
 
     /*
      * places to look for catalogs ??

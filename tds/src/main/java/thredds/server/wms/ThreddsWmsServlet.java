@@ -33,6 +33,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Formatter;
 import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
@@ -47,8 +48,8 @@ import uk.ac.rdg.resc.edal.wms.RequestParams;
 import uk.ac.rdg.resc.edal.wms.WmsCatalogue;
 import uk.ac.rdg.resc.edal.wms.WmsServlet;
 import java.util.Map;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import thredds.core.TdsRequestedDataset;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.dataset.NetcdfDataset;
@@ -69,6 +70,8 @@ import ucar.nc2.dataset.NetcdfDataset;
 @RequestMapping("/wms")
 public class ThreddsWmsServlet extends WmsServlet {
   private static final Logger logger = LoggerFactory.getLogger(ThreddsWmsServlet.class);
+
+  private static final Map<String, String> defaultStyles = Collections.singletonMap("styles", "default");
 
   private static class CachedWmsCatalogue {
     public final ThreddsWmsCatalogue wmsCatalogue;
@@ -111,6 +114,11 @@ public class ThreddsWmsServlet extends WmsServlet {
     String removePrefix = null;
     TdsRequestedDataset tdsDataset = new TdsRequestedDataset(httpServletRequest, removePrefix);
     ThreddsWmsCatalogue catalogue = acquireCatalogue(httpServletRequest, httpServletResponse, tdsDataset.getPath());
+
+    // set default style if needed
+    if (request.equals("GetMap") && params.getString("styles", "").isEmpty()) {
+      params = params.mergeParameters(defaultStyles);
+    }
 
     /*
      * Now that we've got a WmsCatalogue, we can pass this request to the

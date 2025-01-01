@@ -6,7 +6,7 @@ package thredds.util;
 
 import com.google.common.base.Preconditions;
 import ucar.nc2.NetcdfFileWriter;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import ucar.nc2.write.NetcdfFileFormat;
 
 /**
@@ -42,8 +42,8 @@ public class TdsPathUtils {
     if (dataPath.startsWith("/"))
       dataPath = dataPath.substring(1);
 
-    if (dataPath.contains("..")) // LOOK what about escapes ??
-      throw new IllegalArgumentException("path cannot contain '..'");
+    if (dataPath.contains("../")) // LOOK what about escapes ??
+      throw new IllegalArgumentException("path cannot contain '../'");
 
     return dataPath;
   }

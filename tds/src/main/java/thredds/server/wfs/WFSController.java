@@ -16,9 +16,9 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Controller for WFS Simple Geometry Web Service
@@ -261,8 +261,8 @@ public class WFSController extends HttpServlet {
         // Last check to see if typenames is specified, must be for GetFeature, DescribeFeatureType
         if (typeName == null) {
           return new WFSExceptionWriter(
-              "WFS server error. For the specifed request, parameter typename or typenames must be specified.", request,
-              "MissingParameterValue");
+              "WFS server error. For the specifed request, parameter typename or typenames must be specified.",
+              "request", "MissingParameterValue");
         }
       }
 
