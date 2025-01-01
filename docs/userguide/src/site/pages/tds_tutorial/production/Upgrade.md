@@ -8,8 +8,7 @@ permalink: upgrade.html
 
 ## Requirements
 
-* Java 11 is required
-* Tomcat 8 (servlet 3.1)
+* Java and tomcat versions listed [here](install_java_tomcat.html#system-requirements)
 * On the command line when starting up Tomcat/TDS, you must specify `-Dtds.content.root.path=<content root>` where `<content root>` points to the top of the content directory.
   Note, in this exmaple, that this is `/data/content/`, not`/data/content/thredds/`. 
   Don't forget the trailing slash. 
@@ -64,6 +63,17 @@ The following is no longer used:
 ~~~
 
 * By default, most services are enabled, but may still be turned off in `threddsConfig.xml`.
+
+### WMS/ Godiva
+TDS 5.x uses the [edal-java](https://github.com/Reading-eScience-Centre/edal-java) library (formerly ncWMS 1.x).
+As this is a major version change to that library, there may be some breaking changes.
+See also the [edal user guide](https://reading-escience-centre.gitbooks.io/edal-user-guide/content/) and the 
+[changes from ncWMS 1.x](https://reading-escience-centre.gitbooks.io/ncwms-user-guide/content/01-ncwms1x.html#changes).
+
+### ncISO services
+To use the ncISO services, you must add the `tds-plugin-jar-with-dependencies.jar` artifact to your TDS for TDS versions >= 5.5.
+For TDS versions prior to 5.5 this artifact was included in the TDS war file.
+See [ncISO configuration](adding_ogc_iso_services.html#nciso-configuration) for more details.
 
 ## Java Web Start
 

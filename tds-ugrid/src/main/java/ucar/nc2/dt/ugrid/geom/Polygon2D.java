@@ -783,7 +783,7 @@ public abstract class Polygon2D implements Shape, Serializable {
 
 
     /* If either polygon does not have vertices... */
-    if (countPoly1 == 0 || countPoly1 == 0) {
+    if (countPoly1 == 0 || countPoly2 == 0) {
       return false;
     }
 
@@ -1145,9 +1145,8 @@ public abstract class Polygon2D implements Shape, Serializable {
     }
 
     /**
-     * Create a new polygon with the provided x & y locations. If the two arrays are of unequal length, an empty polygon
-     * is created. NaN
-     * values are ignored
+     * Create a new polygon with the provided x and y locations. If the two arrays are of unequal length, an empty
+     * polygon is created. NaN values are ignored
      * 
      * @param xlocs
      *        the array of x locations.
@@ -1504,9 +1503,8 @@ public abstract class Polygon2D implements Shape, Serializable {
     }
 
     /**
-     * Create a new polygon with the provided x & y locations. If the two arrays are of unequal length, an empty polygon
-     * is created. NaN
-     * values are ignored
+     * Create a new polygon with the provided x and y locations. If the two arrays are of unequal length, an empty
+     * polygon is created. NaN values are ignored
      * 
      * @param xlocs
      *        the array of x locations.

@@ -5,6 +5,7 @@
 package thredds.server.ncss.controller.grid;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.FileNotFoundException;
@@ -30,6 +31,7 @@ import org.springframework.web.context.WebApplicationContext;
 import thredds.mock.web.MockTdsContextLoader;
 import thredds.server.ncss.format.SupportedFormat;
 import thredds.util.Constants;
+import thredds.util.TestUtils;
 import ucar.nc2.ffi.netcdf.NetcdfClibrary;
 import ucar.nc2.util.cache.FileCacheIF;
 import ucar.unidata.io.RandomAccessFile;
@@ -78,7 +80,7 @@ public class GridDatasetControllerTest {
   @Test
   @Category(NeedsCdmUnitTest.class)
   public void getGridSubsetOnGridDatasetNc4() throws Exception {
-    skipTestIfNetCDF4NotPresent();
+    TestUtils.skipTestIfNetCDF4NotPresent();
 
     RequestBuilder rb = MockMvcRequestBuilders.get("/ncss/grid/testGFSfmrc/GFS_CONUS_80km_nc_best.ncd")
         .servletPath("/ncss/grid/testGFSfmrc/GFS_CONUS_80km_nc_best.ncd")
@@ -141,10 +143,11 @@ public class GridDatasetControllerTest {
 
     final FileCacheIF rafCache = RandomAccessFile.getGlobalFileCache();
     rafCache.clearCache(true);
-    assertThat(rafCache.showCache()).isEmpty();
+    assertWithMessage(rafCache.showCache().toString()).that(rafCache.showCache()).isEmpty();
     mockMvc.perform(rb);
-    assertThat(rafCache.showCache().size()).isEqualTo(1);
-    assertThat(rafCache.showCache().get(0)).startsWith("false"); // file should not be locked
+    assertWithMessage(rafCache.showCache().toString()).that(rafCache.showCache().size()).isEqualTo(1);
+    // file should not be locked
+    assertWithMessage(rafCache.showCache().toString()).that(rafCache.showCache().get(0)).startsWith("false");
   }
 
   private class FilenameMatcher extends BaseMatcher<String> {
@@ -162,9 +165,5 @@ public class GridDatasetControllerTest {
       String value = (String) item;
       return value.endsWith(suffix);
     }
-  }
-
-  private static void skipTestIfNetCDF4NotPresent() {
-    assumeTrue(NetcdfClibrary.isLibraryPresent());
   }
 }

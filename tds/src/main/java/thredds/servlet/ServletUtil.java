@@ -282,6 +282,12 @@ public class ServletUtil {
     final String ncmlLocation = TdsRequestedDataset.getLocationFromNcml(requestPath);
     final String location =
         ncmlLocation != null ? ncmlLocation : TdsRequestedDataset.getLocationFromRequestPath(requestPath);
+
+    if (location == null) {
+      response.sendError(HttpServletResponse.SC_NOT_FOUND, "Could not find file with URL path: " + requestPath);
+      return;
+    }
+
     final MFile file = MFiles.create(location);
 
     if (file == null) {
@@ -289,7 +295,7 @@ public class ServletUtil {
       return;
     }
 
-    if (file.isDirectory()) {
+    if (file.isDirectory() && !file.isZipFile()) {
       response.sendError(HttpServletResponse.SC_BAD_REQUEST,
           "Expected a file name instead of a directory for URL path: " + requestPath);
       return;
@@ -388,8 +394,8 @@ public class ServletUtil {
   static public void showSystemProperties(PrintStream out) {
 
     Properties sysp = System.getProperties();
-    Enumeration e = sysp.propertyNames();
-    List<String> list = Collections.list(e);
+    Set<String> propertyNames = sysp.stringPropertyNames();
+    List<String> list = new ArrayList<>(propertyNames);
     Collections.sort(list);
 
     out.println("System Properties:");

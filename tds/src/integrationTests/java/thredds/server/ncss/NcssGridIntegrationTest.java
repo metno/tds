@@ -15,13 +15,16 @@ import org.slf4j.LoggerFactory;
 import thredds.test.util.TestOnLocalServer;
 import thredds.util.Constants;
 import thredds.util.ContentType;
+import thredds.util.TestUtils;
 import ucar.httpservices.HTTPException;
 import ucar.httpservices.HTTPFactory;
 import ucar.httpservices.HTTPMethod;
 import ucar.httpservices.HTTPSession;
 import ucar.ma2.Array;
+import ucar.ma2.InvalidRangeException;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.NetcdfFiles;
+import ucar.nc2.Variable;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.NetcdfDatasets;
 import ucar.nc2.dt.grid.GeoGrid;
@@ -47,32 +50,6 @@ public class NcssGridIntegrationTest {
       logger.debug("{}", nf);
     }
   }
-
-  private void openBinaryOld(byte[] content, String gridName) throws IOException {
-    try (NetcdfFile nf = NetcdfFile.openInMemory("test_data.nc", content)) {
-      GridDataset gdsDataset = new GridDataset(new NetcdfDataset(nf));
-      assertThat(gdsDataset.findGridByName(gridName)).isNotNull();
-      logger.debug("{}", nf);
-    }
-  }
-
-  /*
-   * @HttpTest(method = Method.GET, path =
-   * "ncss/grid/gribCollection/GFS_CONUS_80km/GFS_CONUS_80km_20120227_0000.grib1/GC?var=Temperature_isobaric&latitude=40&longitude=-102&vertCoord=225")
-   * public void checkGridAsPointXml() throws JDOMException, IOException {
-   * assertOk(response);
-   * String xml = response.getBody(String.class);
-   * logger.debug("xml={}", xml);
-   * Reader in = new StringReader(xml);
-   * SAXBuilder sb = new SAXBuilder();
-   * Document doc = sb.build(in);
-   * 
-   * XPathExpression<Element> xpath = XPathFactory.instance().compile("/grid/point/data[@name='Temperature_isobaric']",
-   * Filters.element());
-   * List<Element> elements = xpath.evaluate(doc);
-   * assertEquals(1, elements.size());
-   * }
-   */
 
   @Test
   public void checkGridForDifferentFormats() throws Exception {
@@ -152,7 +129,7 @@ public class NcssGridIntegrationTest {
   // this fails when _ChunkSizes are left on
   @Test
   public void testNcssFailure() throws Exception {
-    skipTestIfNetCDF4NotPresent();
+    TestUtils.skipTestIfNetCDF4NotPresent();
 
     String filename =
         "scanCdmUnitTests/formats/netcdf4/COMPRESS_LEV2_20140201000000-GLOBCURRENT-L4-CURekm_15m-ERAWS_EEM-v02.0-fv01.0.nc";
@@ -168,7 +145,7 @@ public class NcssGridIntegrationTest {
 
   @Test
   public void shouldReturnCorrectFileTypeForAcceptParameter() throws HTTPException {
-    skipTestIfNetCDF4NotPresent();
+    TestUtils.skipTestIfNetCDF4NotPresent();
 
     checkFileType("netcdf3", HttpServletResponse.SC_OK, ".nc");
     checkFileType("netcdf", HttpServletResponse.SC_OK, ".nc");
@@ -198,7 +175,28 @@ public class NcssGridIntegrationTest {
     }
   }
 
-  private static void skipTestIfNetCDF4NotPresent() {
-    assumeTrue(NetcdfClibrary.isLibraryPresent());
+  @Test
+  public void shouldNotReturnNaNsForBestGribCollectionVariable() throws IOException, InvalidRangeException {
+    // precip variable not present in 2024-03-01T19:00:00Z partition
+    final String varName = "Total_precipitation_Forecast_altitude_above_msl_1_Hour_Accumulation";
+    final String timeBeforeMissing = "2024-03-01T18:00:00Z";
+    final String timeAfterMissing = "2024-03-01T21:00:00Z";
+
+    final String endpoint = TestOnLocalServer.withHttpPath("/ncss/grid/grib/NCEP/RTMA/CONUS_2p5km/Best" + "?var="
+        + varName + "&north=40&west=-70&east=-69&south=39&horizStride=1&accept=netcdf3" + "&time_start="
+        + timeBeforeMissing + "&time_end=" + timeAfterMissing);
+
+    final byte[] content = TestOnLocalServer.getContent(endpoint, HttpServletResponse.SC_OK, ContentType.netcdf);
+
+    try (NetcdfFile ncf = NetcdfFiles.openInMemory("test_data.nc", content)) {
+      final Variable var = ncf.findVariable(varName);
+      assertThat((Object) var).isNotNull();
+      // first element for all times
+      final Array array = var.read(":,0:0,0:0,0:0");
+      assertThat(array.getSize()).isEqualTo(3);
+      assertThat(array.getFloat(0)).isNotNaN();
+      assertThat(array.getFloat(1)).isNotNaN();
+      assertThat(array.getFloat(2)).isNotNaN();
+    }
   }
 }

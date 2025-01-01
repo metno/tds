@@ -19,6 +19,7 @@ dependencies {
   compile 'edu.ucar:cdm-misc'
   compile 'edu.ucar:cdm-image'
   compile 'edu.ucar:cdm-s3'
+  compile 'edu.ucar:cdm-zarr'
   compile 'edu.ucar:grib'
   compile 'edu.ucar:netcdf4'
   compile 'edu.ucar:httpservices'
@@ -30,9 +31,8 @@ dependencies {
   implementation project(':tds-ugrid')
 
   // DAP4 Dependencies (technically forward)
-  compile 'edu.ucar:dap4'
-//
-//  compile project(':dap4:dap4-servlet')
+  implementation 'edu.ucar:dap4'
+  implementation project(':dap4:d4servlet')
 
   // Server stuff
   providedCompile "jakarta.servlet:jakarta.servlet-api:${depVersion.javaxServletApi}"
@@ -49,6 +49,7 @@ dependencies {
   compile 'com.google.code.findbugs:jsr305'
   compile 'com.google.guava:guava'
   compile 'joda-time:joda-time'
+  compile 'org.apache.commons:commons-lang3'
 
   // WaterML
   compile 'org.apache.xmlbeans:xmlbeans'
@@ -66,6 +67,8 @@ dependencies {
 
   // Needed for XPath operations in mock tests
   testCompile 'jaxen:jaxen'
+  // Needed for XPaths in WmsDetailedConfig
+  runtime 'jaxen:jaxen'
 
   // edal ncwms related libs
   compile('uk.ac.rdg.resc:edal-common')
@@ -73,11 +76,6 @@ dependencies {
   compile ('uk.ac.rdg.resc:edal-graphics')
   compile ('uk.ac.rdg.resc:edal-wms')
   compile('uk.ac.rdg.resc:edal-godiva')
-
-  // threddsIso related libs
-  runtime 'EDS:tds-plugin'
-  runtime 'net.sf.saxon:Saxon-HE'
-  runtime 'jaxen:jaxen'
 
   // json writing
   'org.json:json'
@@ -102,6 +100,7 @@ dependencies {
   testCompile 'junit:junit'
   testCompile project(':tds-test-utils');
   testCompile 'edu.ucar:cdm-test-utils'  // Contains stuff like the JUnit @Category classes.
+  testCompile 'edu.ucar:httpservices'
 
   // Logging
   compile 'org.slf4j:slf4j-api'

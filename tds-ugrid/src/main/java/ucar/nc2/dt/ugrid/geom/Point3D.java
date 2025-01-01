@@ -258,8 +258,9 @@ public abstract class Point3D implements Cloneable {
    * instantiation and provide a number of formats for storing the information necessary to satisfy the various accessor
    * methods below.
    * 
-   * @see java.awt.geom.Point3D.Float
-   * @see java.awt.geom.Point3D.Double
+   * see java.awt.geom.Point3D.Float
+   * see java.awt.geom.Point3D.Double
+   * 
    * @see java.awt.Point
    */
   protected Point3D() {}
@@ -347,7 +348,7 @@ public abstract class Point3D implements Cloneable {
   public static double distanceSq(double x1, double y1, double z1, double x2, double y2, double z2) {
     x1 -= x2;
     y1 -= y2;
-    z2 -= z2;
+    z1 -= z2;
     return (x1 * x1 + y1 * y1 + z1 * z1);
   }
 

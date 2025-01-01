@@ -9,7 +9,7 @@
 
   <service name="all" base="" serviceType="compound">
     <service name="odap" serviceType="OpenDAP" base="/thredds/dodsC/"/>
-    <service name="dap4" serviceType="DAP4" base="/thredds/dap4/"/>
+    <service name="d4dap" serviceType="DAP4" base="/thredds/dap4/"/>
     <service name="http" serviceType="HTTPServer" base="/thredds/fileServer/"/>
     <service name="wcs" serviceType="WCS" base="/thredds/wcs/"/>
     <service name="wms" serviceType="WMS" base="/thredds/wms/"/>
@@ -49,6 +49,27 @@
 
   <dataset name="Test Single Dataset" ID="testDataset" serviceName="odap" urlPath="localContent/testData.nc" dataType="Grid"/>
   <dataset name="Test Grid as Point" ID="testGAP" serviceName="all" urlPath="localContent/testGridAsPoint.nc" dataType="Grid"/>
+  <dataset name="Test Enhancements">
+    <dataset name="With Attribute" ID="withAttribute" serviceName="all" urlPath="localContent/testOffset.nc" dataType="Grid"/>
+    <dataset name="With NcML" ID="withNcMl" serviceName="all" urlPath="testOffsetWithNcml.nc">
+      <serviceName>all</serviceName>
+      <ncml:netcdf xmlns="http://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2" enhance="all"
+      location="content/testdata/testOffset.nc">
+        <variable name="variableWithoutOffset">
+          <attribute name="add_offset" type="float" value="-100"/>
+        </variable>
+      </ncml:netcdf>
+    </dataset>
+    <dataset name="With NcML enhance=none" ID="withNcMlEnhanceNone" serviceName="all" urlPath="testOffsetWithNcmlEnhanceNone.nc">
+      <serviceName>all</serviceName>
+      <ncml:netcdf xmlns="http://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2" enhance="none"
+        location="content/testdata/testOffset.nc">
+        <variable name="variableWithoutOffset">
+          <attribute name="add_offset" type="float" value="-100"/>
+        </variable>
+      </ncml:netcdf>
+    </dataset>
+  </dataset>
 
   <dataset name="Test Dap4 Dataset" ID="testDap4Dataset" serviceName="dap4"
            urlPath="cdmUnitTest/ft/coverage/03061219_ruc.nc" dataType="Grid"/>
@@ -161,9 +182,8 @@
 
   <dataset name="Ncml Tests">
 
-    <!-- UNTESTED test NcML in dataset LOOK doesnt work -->
-    <dataset name="Example NcML Modified - DODS" ID="ExampleNcMLModified" urlPath="ExampleNcML/Modified.nc">
-      <serviceName>odap</serviceName>
+    <dataset name="Example NcML Modified" ID="ExampleNcMLModified" urlPath="ExampleNcML/Modified.nc">
+      <serviceName>all</serviceName>
       <dataType>Grid</dataType>
       <ncml:netcdf xmlns="http://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2" location="${cdmUnitTest}/tds/example1.nc" addRecords="true">
         <attribute name="name" value="value"/>
@@ -172,6 +192,9 @@
           <attribute name="long_name" value="relatively humid"/>
           <attribute name="units" value="percent (%)"/>
           <remove type="attribute" name="description"/>
+        </variable>
+        <variable name="time">
+          <attribute name="units" value="hours since 2000-01-01 00:00:00"/>
         </variable>
       </ncml:netcdf>
     </dataset>
@@ -234,6 +257,9 @@
           <attribute name="units" value="percent (%)"/>
           <remove type="attribute" name="description"/>
         </variable>
+        <variable name="time">
+          <attribute name="units" value="hours since 2000-01-01 00:00:00"/>
+        </variable>
       </ncml:netcdf>
 
       <filter>
@@ -285,6 +311,7 @@
   <catalogRef xlink:title="ESGF" xlink:href="testEsgfProblems.xml" name=""/>
   <catalogRef xlink:title="RDA" xlink:href="testRdaProblems.xml" name=""/>
   <catalogRef xlink:title="TDS S3" xlink:href="tds-s3.xml" name=""/>
+  <catalogRef xlink:title="TDS Zarr" xlink:href="tds-zarr.xml" name=""/>
   <catalogRef xlink:title="Test nested aggregation" xlink:href="catalogNestedAgg.xml" name=""/>
 
   <catalogScan location="catalogs5" path="catalogs5" name="catalog scan with version 5 features"/>

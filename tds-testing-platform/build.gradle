@@ -18,19 +18,11 @@ dependencies {
     // Spring-test v5.3.4 introduced a hard dependency on servlet api v4.
     // That will be rolled back in v5.4.5, so for now, we specifically ask for
     // spring-test 5.3.3.
-    api 'org.springframework:spring-test:5.3.27'
-
-    // opendap
-    api 'org.apache.taglibs:taglibs-standard-spec'
-    api 'org.apache.taglibs:taglibs-standard-impl'
+    api 'org.springframework:spring-test:5.3.32'
 
     // dap4
     // defined in tds-platform as well, but using runtime config
     api 'org.apache.logging.log4j:log4j-web' // api because of :dap4:d4tests)
-
-    // threddsIso
-    api 'EDS:tds-plugin:2.4.0-SNAPSHOT' // api because of :it
-    api 'net.sf.saxon:Saxon-HE:9.7.0-8' // api because of :it
 
     // tds
     api "jaxen:jaxen:${depVersion.jaxen}"  // api because of XPath operations in mock tests
@@ -43,7 +35,6 @@ dependencies {
     api 'org.hamcrest:hamcrest-core:2.2'
 
     // only needed for it subproject
-    api 'org.apache.commons:commons-lang3:3.4' // replace?
     api 'org.xmlunit:xmlunit-core:2.7.0'  // For comparing catalog XML.
 
   }

@@ -5,6 +5,8 @@
 
 package thredds.server.catalog;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -39,7 +41,19 @@ public class TestServiceDefaults {
     Service s = ds.getServiceDefault();
     Assert.assertNotNull(s);
     Assert.assertTrue(s.getType() == ServiceType.Compound);
-    Assert.assertEquals(10, s.getNestedServices().size());
+    Assert.assertEquals(7, s.getNestedServices().size());
+  }
+
+  @Test
+  public void testStandardServicesForNestedDataset() {
+    String catalog = "/catalog/catalogs5/testServices.xml";
+    Catalog cat = TdsLocalCatalog.open(catalog);
+    Dataset ds = cat.findDatasetByID("testInnerGridDataset");
+    assertThat(ds.getFeatureType()).isEqualTo(FeatureType.GRID);
+
+    Service service = ds.getServiceDefault();
+    assertThat(service.getType()).isEqualTo(ServiceType.Compound);
+    assertThat(service.getNestedServices().size()).isEqualTo(7);
   }
 
   // Relies on:
@@ -62,7 +76,7 @@ public class TestServiceDefaults {
     Assert.assertNotNull(s);
 
     Assert.assertTrue(s.getType() == ServiceType.Compound);
-    Assert.assertEquals(10, s.getNestedServices().size());
+    Assert.assertEquals(7, s.getNestedServices().size());
   }
 
   @Test
@@ -72,7 +86,7 @@ public class TestServiceDefaults {
     Assert.assertEquals(3, cat.getServices().size());
 
     check(cat, "all", 11);
-    check(cat, "GridServices", 10);
+    check(cat, "GridServices", 7);
     check(cat, "opendapOnly", 1);
 
     Service localServices = cat.findService("opendapOnly");
@@ -80,6 +94,9 @@ public class TestServiceDefaults {
     Assert.assertEquals(ServiceType.OPENDAP, localServices.getType());
 
     for (Dataset ds : cat.getDatasetsLocal()) {
+      if (ds.getId() != null && ds.getId().equals("testNestedGridDataset")) {
+        continue;
+      }
       if (!(ds instanceof CatalogRef)) {
         Assert.assertTrue(ds.hasAccess());
 

@@ -138,4 +138,22 @@
     <vulnerabilityName>CVE-2020-15250</vulnerabilityName>
     <vulnerabilityName>CVE-2021-28170</vulnerabilityName>
   </suppress>
+  <suppress>
+    <notes><![CDATA[
+      file name: quartz-2.3.2.jar
+      reason: We do not use the vulnerable function (SendQueueMessageJob.execute)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.quartz\-scheduler/quartz@.*$</packageUrl>
+    <cve>CVE-2023-39017</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: jfreechart-1.0.19.jar
+   reason: Disputed CVEs and we do not use the vulnerable components (BubbleXYItemLabelGenerator.java, /chart/annotations/CategoryLineAnnotation, setSeriesNeedle)
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.jfree/jfreechart@.*$</packageUrl>
+    <vulnerabilityName>CVE-2024-23076</vulnerabilityName>
+    <vulnerabilityName>CVE-2024-22949</vulnerabilityName>
+    <vulnerabilityName>CVE-2023-52070</vulnerabilityName>
+  </suppress>
 </suppressions>

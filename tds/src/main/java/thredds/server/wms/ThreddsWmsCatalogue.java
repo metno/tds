@@ -147,15 +147,6 @@ public class ThreddsWmsCatalogue implements WmsCatalogue {
     return tdsDatasetPath;
   }
 
-  /**
-   * Get time of last modification of the underlying netcdfDataset
-   *
-   * @return time of last modification in Unix time (msecs since reference), or 0 if unknown
-   */
-  long getLastModified() {
-    return datasetFactory.getLastModified();
-  }
-
   @Override
   public FeaturesAndMemberName getFeaturesForLayer(String layerName, PlottingDomainParams params) throws EdalException {
     /*
@@ -430,5 +421,21 @@ public class ThreddsWmsCatalogue implements WmsCatalogue {
      * variable being plotted.
      */
     return new TdsEnhancedVariableMetadata(this, metadata);
+  }
+
+  /**
+   * Close resources
+   */
+  void close() throws IOException {
+    datasetFactory.close();
+  }
+
+  /**
+   * Get time of last modification of the underlying netcdfDataset
+   *
+   * @return time of last modification in Unix time (msecs since reference), or 0 if unknown
+   */
+  long getLastModified() {
+    return datasetFactory.getLastModified();
   }
 }

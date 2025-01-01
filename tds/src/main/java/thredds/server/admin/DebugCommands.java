@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import thredds.featurecollection.cache.GridInventoryCacheChronicle;
 import thredds.server.config.TdsContext;
+import thredds.server.wms.ThreddsWmsServlet;
 import thredds.servlet.ServletUtil;
 import ucar.nc2.dataset.NetcdfDataset;
 import java.io.ByteArrayOutputStream;
@@ -149,6 +150,9 @@ public class DebugCommands {
         f.format("%n%n");
         GridInventoryCacheChronicle.showCache(f);
 
+        f.format("%n%n");
+        ThreddsWmsServlet.showCache(f);
+
         e.pw.flush();
       }
     };
@@ -156,6 +160,7 @@ public class DebugCommands {
 
     act = new Action("clearCaches", "Clear All File Object Caches") {
       public void doAction(Event e) {
+        ThreddsWmsServlet.resetCache();
         NetcdfDataset.getNetcdfFileCache().clearCache(false);
         NetcdfDatasets.getNetcdfFileCache().clearCache(false);
         RandomAccessFile.getGlobalFileCache().clearCache(false);
@@ -220,6 +225,13 @@ public class DebugCommands {
     };
     debugHandler.addAction(act);
 
+    act = new Action("forceWMSCache", "Force clear WMS Cache") {
+      public void doAction(Event e) {
+        ThreddsWmsServlet.resetCache();
+        e.pw.println("  WMS force clearCache done");
+      }
+    };
+    debugHandler.addAction(act);
   }
 
   protected void makeDebugActions() {

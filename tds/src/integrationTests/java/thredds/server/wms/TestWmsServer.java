@@ -6,6 +6,9 @@
 package thredds.server.wms;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletResponse;
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -28,9 +31,13 @@ import java.util.Arrays;
 import java.util.List;
 import thredds.test.util.TestOnLocalServer;
 import thredds.util.ContentType;
+import ucar.httpservices.HTTPException;
+import ucar.httpservices.HTTPFactory;
+import ucar.httpservices.HTTPSession;
 import ucar.unidata.util.test.category.NeedsCdmUnitTest;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 public class TestWmsServer {
   private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -67,6 +74,20 @@ public class TestWmsServer {
         TestOnLocalServer.withHttpPath("/wms/scanCdmUnitTests/conventions/cf/ipcc/tas_A1.nc?service=WMS&version=1.3.0"
             + "&request=GetMap&CRS=CRS:84&WIDTH=512&HEIGHT=512&LAYERS=tas&BBOX=0,-90,360,90&format="
             + ContentType.png.toString() + "&time=1850-01-16T12:00:00Z");
+    testGetPng(endpoint);
+  }
+
+  @Test
+  @Category(NeedsCdmUnitTest.class)
+  public void testGetPngInAnotherProjection() {
+    String endpoint =
+        TestOnLocalServer.withHttpPath("/wms/scanCdmUnitTests/conventions/cf/ipcc/tas_A1.nc?service=WMS&version=1.3.0"
+            + "&request=GetMap&CRS=EPSG:3857&WIDTH=512&HEIGHT=512&LAYERS=tas&BBOX=0,-90,360,90&format="
+            + ContentType.png.toString() + "&time=1850-01-16T12:00:00Z");
+    testGetPng(endpoint);
+  }
+
+  private static void testGetPng(String endpoint) {
     byte[] result = TestOnLocalServer.getContent(endpoint, HttpServletResponse.SC_OK, ContentType.png.toString());
     // make sure we get a png back
     // first byte (unsigned) should equal 137 (decimal)
@@ -133,20 +154,77 @@ public class TestWmsServer {
 
   @Test
   public void shouldApplyOffsetToData() throws IOException, JDOMException {
-    final String[] variableNames = {"variableWithOffset", "variableWithoutOffset"};
-    for (String variableName : variableNames) {
-      final String endpoint = TestOnLocalServer.withHttpPath("/wms/scanLocal/testOffset.nc?" + "LAYERS=" + variableName
-          + "&service=WMS&version=1.3.0&CRS=CRS:84&BBOX=0,0,10,10&WIDTH=100&HEIGHT=100"
-          + "&REQUEST=GetFeatureInfo&QUERY_LAYERS=" + variableName + "&i=0&j=0");
-      final byte[] result = TestOnLocalServer.getContent(endpoint, HttpServletResponse.SC_OK, ContentType.xmlwms);
+    final String datasetPath = "scanLocal/testOffset.nc";
 
-      final Reader reader = new StringReader(new String(result, StandardCharsets.UTF_8));
-      final Document doc = new SAXBuilder().build(reader);
-      final XPathExpression<Element> xpath = XPathFactory.instance().compile("//FeatureInfo/value", Filters.element());
-      final Element element = xpath.evaluateFirst(doc);
+    final String withOffsetEndpoint = createGetFeatureInfoEndpoint(datasetPath, "variableWithOffset");
+    checkValue(withOffsetEndpoint, 7.5);
 
-      assertThat(element.getContentSize()).isEqualTo(1);
-      assertThat(Double.valueOf(element.getText())).isWithin(TOLERANCE).of(7.5);
+    final String withoutOffsetEndpoint = createGetFeatureInfoEndpoint(datasetPath, "variableWithoutOffset");
+    checkValue(withoutOffsetEndpoint, 7.5);
+  }
+
+  @Test
+  public void shouldApplyNcmlOffsetToData() throws IOException, JDOMException {
+    final String datasetPath = "testOffsetWithNcml.nc";
+
+    final String withOffsetEndpoint = createGetFeatureInfoEndpoint(datasetPath, "variableWithOffset");
+    checkValue(withOffsetEndpoint, 7.5);
+
+    final String withoutOffsetEndpoint = createGetFeatureInfoEndpoint(datasetPath, "variableWithoutOffset");
+    checkValue(withoutOffsetEndpoint, -92.5);
+  }
+
+  @Test
+  public void shouldGetMapInParallel() throws InterruptedException {
+    final int nRequests = 100;
+    final int nThreads = 10;
+
+    final ExecutorService executor = Executors.newFixedThreadPool(nThreads);
+    final List<Callable<Integer>> tasks = new ArrayList<>();
+    for (int i = 0; i < nRequests; i++) {
+      tasks.add(this::getMap);
     }
+
+    final List<Future<Integer>> results = executor.invokeAll(tasks);
+    final List<Integer> resultCodes = results.stream().map(result -> {
+      try {
+        return result.get();
+      } catch (InterruptedException | ExecutionException e) {
+        throw new RuntimeException(e);
+      }
+    }).collect(Collectors.toList());
+
+    assertWithMessage("result codes = " + Arrays.toString(resultCodes.toArray()))
+        .that(resultCodes.stream().allMatch(code -> code.equals(HttpServletResponse.SC_OK))).isTrue();
+  }
+
+  private int getMap() {
+    final String endpoint = TestOnLocalServer
+        .withHttpPath("/wms/scanLocal/2004050300_eta_211.nc" + "?LAYERS=Z_sfc" + "&SERVICE=WMS" + "&VERSION=1.1.1"
+            + "&REQUEST=GetMap" + "&SRS=EPSG%3A4326" + "&BBOX=-64,26,-35,55" + "&WIDTH=256" + "&HEIGHT=256");
+
+    try (HTTPSession session = HTTPFactory.newSession(endpoint)) {
+      return HTTPFactory.Get(session).execute();
+    } catch (HTTPException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private String createGetFeatureInfoEndpoint(String path, String variableName) {
+    return TestOnLocalServer.withHttpPath("/wms/" + path + "?LAYERS=" + variableName
+        + "&service=WMS&version=1.3.0&CRS=CRS:84&BBOX=0,0,10,10&WIDTH=100&HEIGHT=100"
+        + "&REQUEST=GetFeatureInfo&QUERY_LAYERS=" + variableName + "&i=0&j=0");
+  }
+
+  private void checkValue(String endpoint, double expectedValue) throws IOException, JDOMException {
+    final byte[] result = TestOnLocalServer.getContent(endpoint, HttpServletResponse.SC_OK, ContentType.xmlwms);
+
+    final Reader reader = new StringReader(new String(result, StandardCharsets.UTF_8));
+    final Document doc = new SAXBuilder().build(reader);
+    final XPathExpression<Element> xpath = XPathFactory.instance().compile("//FeatureInfo/value", Filters.element());
+    final Element element = xpath.evaluateFirst(doc);
+
+    assertThat(element.getContentSize()).isEqualTo(1);
+    assertThat(Double.valueOf(element.getText())).isWithin(TOLERANCE).of(expectedValue);
   }
 }

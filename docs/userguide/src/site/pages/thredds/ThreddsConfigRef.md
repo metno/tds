@@ -61,7 +61,7 @@ logos of the server and host institution)
 * all generated THREDDS catalogs that don't override this information
 
 
-The best way to use your own logo is to put it in the `${tds.content.root.path}/thredds/public/` directory, and specify it in `serverInformation` as `/thredds/<name>`, e.g.:
+The best way to use your own logo is to put it in the `${tomcat path}/webapps/thredds/` directory, and specify it in `serverInformation` as `/thredds/<name>`, e.g.:
 
 ~~~xml
 <logoUrl>/thredds/yourIcon.gif</logoUrl>
@@ -236,6 +236,7 @@ The following shows all the configuration options available in the WMS section o
   <allow>true</allow>
   <allowRemote>false</allowRemote>
   <paletteLocationDir>wmsPalettes</paletteLocationDir>
+  <stylesLocationDir>wmsStyles</stylesLocationDir>
   <maxImageWidth>2048</maxImageWidth>
   <maxImageHeight>2048</maxImageHeight>
 </WMS>
@@ -259,6 +260,13 @@ where they are contained.
   * More information on the format of palette files can also be found in the 
   [ncWMS documentation](https://reading-escience-centre.gitbooks.io/ncwms-user-guide/content/06-development.html#:~:text=To%20add%20new,in%20hexadecimal%20notation.).
   * If you created palette files for TDS 4.x and would like to use them in TDS 5.x, an open source tool named [Magic Palette Converter](https://github.com/billyz313/magic-palette-converter){:target="_blank"} for THREDDS is available to assist in the conversion (special thanks to [Billy Ashmall](https://github.com/Unidata/tds/discussions/346){:target="_blank"}!)
+* `stylesLocationDir`: optionally specify the location of the directory containing your own style files, by specifying the directory
+  where they are contained.
+  * If the directory location starts with a `/`, the path is absolute, otherwise it is relative to `${tds.content.root.path}/thredds/`.
+  * The default directory for custom styles files is `${tds.content.root.path}/thredds/wmsStyles`.
+  * If you don't specify a custom styles directory, or specify it incorrectly, the default directory will be used.
+  * More information on the format of style files can also be found in the
+    [ncWMS documentation](https://reading-escience-centre.gitbooks.io/ncwms-user-guide/content/06-development.html#styles).
 * `maxImageWidth`: the maximum image width in pixels that this WMS service will return.
 * `maxImageHeight`: the maximum image height in pixels that this WMS service will return.
 
@@ -299,15 +307,16 @@ Here is the description of the various options:
   Optional; default is that there is no size limitation.
   If the file is > 2 GB, large format netCDF will be written.
 
-### ncISO Service
+### ncISO Services
 
-By default, these services are enabled, and can be disabled by including the following in the `threddsConfig.xml` file:
+By default, these services are disabled.
+Provided that you have added the [ncISO plugin](adding_ogc_iso_services.html#nciso-configuration), these services can be enabled by including the following in the `threddsConfig.xml` file:
 
 ~~~xml
 <NCISO>
-  <ncmlAllow>false</ncmlAllow>
-  <uddcAllow>false</uddcAllow>
-  <isoAllow>false</isoAllow>
+  <ncmlAllow>true</ncmlAllow>
+  <uddcAllow>true</uddcAllow>
+  <isoAllow>true</isoAllow>
 </NCISO>
 ~~~
 
@@ -434,7 +443,7 @@ If not otherwise set, the TDS will use the `${tds.content.root.path}/thredds/cac
 We recommend that you use this default, by not specifying a `AggregationCache`.`dir` element.
 
 Every `scour` amount of time, any item that hasn't been changed since `maxAge` time will be deleted.
-If you have aggregations that never change, set `scour` to `-1` to disable the operation.
+If you have aggregations that never change, set `scour` to `-1 sec` to disable the operation.
 Otherwise, make `maxAge` longer than the longest time between changes.
 Basically, you don't want to remove active aggregations.
 

@@ -44,15 +44,11 @@ public abstract class TdsUnitTestCommon {
   static final Set<NetcdfDataset.Enhance> ENHANCEMENT = EnumSet.of(NetcdfDataset.Enhance.CoordSystems);
 
   protected static String threddsroot = null;
-  protected static String threddsServer = null;
 
   static {
     // Compute the root path
     threddsroot = locateThreddsRoot();
     assert threddsroot != null : "Cannot locate /thredds parent dir";
-    threddsServer = TdsTestDir.remoteTestServer;
-    if (DEBUG)
-      System.err.println("TdsUnitTestCommon: threddsServer=" + threddsServer);
   }
 
   //////////////////////////////////////////////////
@@ -384,7 +380,7 @@ public abstract class TdsUnitTestCommon {
   /**
    * return true if this path appears to start with a windows drive letter
    *
-   * @param path
+   * @param path to check
    * @return true, if path has drive letter
    */
 

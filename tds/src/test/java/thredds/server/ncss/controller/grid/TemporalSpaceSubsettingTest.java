@@ -20,12 +20,12 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import thredds.test.util.TdsTestDir;
 import thredds.junit4.SpringJUnit4ParameterizedClassRunner;
 import thredds.junit4.SpringJUnit4ParameterizedClassRunner.Parameters;
 import thredds.mock.params.GridPathParams;
 import thredds.mock.web.MockTdsContextLoader;
 import thredds.server.ncss.format.SupportedFormat;
+import thredds.util.TestUtils;
 import ucar.nc2.Dimension;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.NetcdfFiles;
@@ -123,7 +123,7 @@ public class TemporalSpaceSubsettingTest {
 
   @Test
   public void shouldGetTimeRange() throws Exception {
-    skipTestIfNetCDF4NotPresent();
+    TestUtils.skipTestIfNetCDF4NotPresent(format);
 
     MvcResult mvc = this.mockMvc.perform(requestBuilder).andReturn();
 
@@ -147,11 +147,5 @@ public class TemporalSpaceSubsettingTest {
 
     assertEquals(lengthTimeDim, time.getLength());
 
-  }
-
-  private void skipTestIfNetCDF4NotPresent() {
-    if (format == SupportedFormat.NETCDF4) {
-      assumeTrue(NetcdfClibrary.isLibraryPresent());
-    }
   }
 }

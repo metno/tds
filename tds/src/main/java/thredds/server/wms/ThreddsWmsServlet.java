@@ -28,15 +28,24 @@
 
 package thredds.server.wms;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalListener;
+import com.google.common.util.concurrent.UncheckedExecutionException;
+import java.io.IOException;
+import java.util.Formatter;
+import java.util.concurrent.ExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import ucar.nc2.dataset.NetcdfDatasets;
+import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.graphics.exceptions.EdalLayerNotFoundException;
 import uk.ac.rdg.resc.edal.wms.RequestParams;
 import uk.ac.rdg.resc.edal.wms.WmsCatalogue;
 import uk.ac.rdg.resc.edal.wms.WmsServlet;
-import java.util.HashMap;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -59,6 +68,7 @@ import ucar.nc2.dataset.NetcdfDataset;
 @Controller
 @RequestMapping("/wms")
 public class ThreddsWmsServlet extends WmsServlet {
+  private static final Logger logger = LoggerFactory.getLogger(ThreddsWmsServlet.class);
 
   private static class CachedWmsCatalogue {
     public final ThreddsWmsCatalogue wmsCatalogue;
@@ -70,16 +80,21 @@ public class ThreddsWmsServlet extends WmsServlet {
     }
   }
 
-  private static final Map<String, CachedWmsCatalogue> catalogueCache = new HashMap<>();
+  private static final RemovalListener<String, CachedWmsCatalogue> removalListener = notification -> {
+    try {
+      notification.getValue().wmsCatalogue.close();
+    } catch (IOException e) {
+      logger.warn("Could not close {}, exception = {}", notification.getKey(), e);
+    }
+  };
 
-  static void resetCache() {
-    catalogueCache.clear();
-  }
+  private static final Cache<String, CachedWmsCatalogue> catalogueCache =
+      CacheBuilder.newBuilder().maximumSize(100).removalListener(removalListener).recordStats().build();
 
   @Override
   @RequestMapping(value = "**", method = {RequestMethod.GET})
   protected void dispatchWmsRequest(String request, RequestParams params, HttpServletRequest httpServletRequest,
-      HttpServletResponse httpServletResponse, WmsCatalogue catalogue) throws Exception {
+      HttpServletResponse httpServletResponse, WmsCatalogue wmsCatalogue) throws Exception {
     /*
      * The super implementation of this gets called with a servlet-wide
      * catalogue, which "should" have been injected with the
@@ -95,39 +110,7 @@ public class ThreddsWmsServlet extends WmsServlet {
     // Look - is setting this to null the right thing to do??
     String removePrefix = null;
     TdsRequestedDataset tdsDataset = new TdsRequestedDataset(httpServletRequest, removePrefix);
-    if (useCachedCatalogue(tdsDataset.getPath())) {
-      catalogue = catalogueCache.get(tdsDataset.getPath()).wmsCatalogue;
-    } else {
-      NetcdfFile ncf = TdsRequestedDataset.getNetcdfFile(httpServletRequest, httpServletResponse, tdsDataset.getPath());
-      NetcdfDataset ncd;
-      if (TdsRequestedDataset.useNetcdfJavaBuilders()) {
-        ncd = NetcdfDatasets.enhance(ncf, NetcdfDataset.getDefaultEnhanceMode(), null);
-      } else {
-        ncd = NetcdfDataset.wrap(ncf, NetcdfDataset.getDefaultEnhanceMode());
-      }
-
-      String netcdfFilePath = ncf.getLocation();
-
-      /*
-       * Generate a new catalogue for the given dataset
-       * 
-       * In the full system, we should keep a cache of these
-       * ThreddsWmsCatalogues, but in this example we just create each new one
-       * on the fly.
-       * 
-       * If a feature cache is required on the WMS (a Good Idea), I recommend
-       * a single cache in this servlet which gets passed to each WmsCatalogue
-       * upon construction (i.e. HERE). That's a TDS implementation detail
-       * though, hence not in this example.
-       */
-      if (netcdfFilePath == null) {
-        throw new EdalLayerNotFoundException("The requested dataset is not available on this server");
-      }
-      catalogue = new ThreddsWmsCatalogue(ncd, tdsDataset.getPath());
-      final CachedWmsCatalogue cachedWmsCatalogue =
-          new CachedWmsCatalogue((ThreddsWmsCatalogue) catalogue, ncd.getLastModified());
-      catalogueCache.put(tdsDataset.getPath(), cachedWmsCatalogue);
-    }
+    ThreddsWmsCatalogue catalogue = acquireCatalogue(httpServletRequest, httpServletResponse, tdsDataset.getPath());
 
     /*
      * Now that we've got a WmsCatalogue, we can pass this request to the
@@ -136,19 +119,84 @@ public class ThreddsWmsServlet extends WmsServlet {
     super.dispatchWmsRequest(request, params, httpServletRequest, httpServletResponse, catalogue);
   }
 
-  // package private for testing
-  static boolean useCachedCatalogue(String tdsDatasetPath) {
-    if (containsCachedCatalogue(tdsDatasetPath)) {
-      // This date last modified will be updated e.g. in the case of an aggregation with a recheckEvery
-      final long netcdfDatasetLastModified = catalogueCache.get(tdsDatasetPath).wmsCatalogue.getLastModified();
-      final long cacheLastModified = catalogueCache.get(tdsDatasetPath).lastModified;
-      return cacheLastModified >= netcdfDatasetLastModified;
+  private ThreddsWmsCatalogue acquireCatalogue(HttpServletRequest httpServletRequest,
+      HttpServletResponse httpServletResponse, String tdsDatasetPath) throws IOException {
+
+    invalidateIfOutdated(tdsDatasetPath);
+
+    try {
+      CachedWmsCatalogue catalogue = catalogueCache.get(tdsDatasetPath, () -> {
+        NetcdfDataset ncd = acquireNetcdfDataset(httpServletRequest, httpServletResponse, tdsDatasetPath);
+        if (ncd.getLocation() == null) {
+          ncd.close();
+          throw new EdalLayerNotFoundException("The requested dataset is not available on this server");
+        }
+
+        try {
+          ThreddsWmsCatalogue threddsWmsCatalogue = new ThreddsWmsCatalogue(ncd, tdsDatasetPath);
+          return new CachedWmsCatalogue(threddsWmsCatalogue, ncd.getLastModified());
+        } catch (EdalException e) {
+          ncd.close();
+          throw e;
+        }
+      });
+
+      return catalogue.wmsCatalogue;
+    } catch (ExecutionException e) {
+      throw new IOException(e);
+    } catch (UncheckedExecutionException e) {
+      if (e.getCause() instanceof EdalException) {
+        throw (EdalException) e.getCause();
+      } else {
+        throw e;
+      }
     }
-    return false;
+  }
+
+  private static void invalidateIfOutdated(String tdsDatasetPath) {
+    final CachedWmsCatalogue cachedWmsCatalogue = catalogueCache.getIfPresent(tdsDatasetPath);
+
+    if (cachedWmsCatalogue != null
+        && cachedWmsCatalogue.lastModified != cachedWmsCatalogue.wmsCatalogue.getLastModified()) {
+      catalogueCache.invalidate(tdsDatasetPath);
+    }
+  }
+
+  private static NetcdfDataset acquireNetcdfDataset(HttpServletRequest httpServletRequest,
+      HttpServletResponse httpServletResponse, String tdsDatasetPath) throws IOException {
+    NetcdfFile ncf = TdsRequestedDataset.getNetcdfFile(httpServletRequest, httpServletResponse, tdsDatasetPath);
+    if (TdsRequestedDataset.useNetcdfJavaBuilders()) {
+      return NetcdfDatasets.enhance(ncf, NetcdfDataset.getDefaultEnhanceMode(), null);
+    } else {
+      return NetcdfDataset.wrap(ncf, NetcdfDataset.getDefaultEnhanceMode());
+    }
+  }
+
+  public static void showCache(Formatter formatter) {
+    formatter.format("%nWmsCache:%n");
+    formatter.format("numberOfEntries=%d, ", getNumberOfEntries());
+    formatter.format("loads=%d, ", getCacheLoads());
+    formatter.format("evictionCount=%d ", catalogueCache.stats().evictionCount());
+    formatter.format("%nentries:%n");
+    for (Map.Entry<String, CachedWmsCatalogue> entry : catalogueCache.asMap().entrySet()) {
+      formatter.format("  %s%n", entry.getKey());
+    }
+  }
+
+  public static void resetCache() {
+    catalogueCache.invalidateAll();
   }
 
   // package private for testing
   static boolean containsCachedCatalogue(String tdsDatasetPath) {
-    return catalogueCache.containsKey(tdsDatasetPath);
+    return catalogueCache.asMap().containsKey(tdsDatasetPath);
+  }
+
+  static long getNumberOfEntries() {
+    return catalogueCache.size();
+  }
+
+  static long getCacheLoads() {
+    return catalogueCache.stats().loadCount();
   }
 }

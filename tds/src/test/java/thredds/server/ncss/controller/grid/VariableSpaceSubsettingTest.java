@@ -22,13 +22,13 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import thredds.test.util.TdsTestDir;
 import thredds.junit4.SpringJUnit4ParameterizedClassRunner;
 import thredds.junit4.SpringJUnit4ParameterizedClassRunner.Parameters;
 import thredds.mock.params.GridDataParameters;
 import thredds.mock.params.GridPathParams;
 import thredds.mock.web.MockTdsContextLoader;
 import thredds.server.ncss.format.SupportedFormat;
+import thredds.util.TestUtils;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.NetcdfFiles;
 import ucar.nc2.dataset.NetcdfDataset;
@@ -127,7 +127,7 @@ public class VariableSpaceSubsettingTest {
 
   @Test
   public void shouldGetVariablesSubset() throws Exception {
-    skipTestIfNetCDF4NotPresent();
+    TestUtils.skipTestIfNetCDF4NotPresent(format);
 
     mockMvc.perform(requestBuilder).andExpect(MockMvcResultMatchers.status().isOk()).andExpect(new ResultMatcher() {
       public void match(MvcResult result) throws Exception {
@@ -150,11 +150,5 @@ public class VariableSpaceSubsettingTest {
         assertArrayEquals(expectedShapes, shapes);
       }
     });
-  }
-
-  private void skipTestIfNetCDF4NotPresent() {
-    if (format == SupportedFormat.NETCDF4) {
-      assumeTrue(NetcdfClibrary.isLibraryPresent());
-    }
   }
 }
