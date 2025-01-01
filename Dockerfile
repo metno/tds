@@ -5,7 +5,7 @@ ARG TOMCAT_VERSION=10.1.34
 FROM docker.io/ubuntu:${UBUNTU_VERSION} AS common_base
 ARG DEBIAN_FRONTEND=noninteractive
 ARG JAVA_VERSION
-RUN --mount=type=cache,target=/var/lib/apt/lists \
+RUN --mount=type=cache,sharing=private,target=/var/lib/apt/lists \
     apt-get update && \
     apt-get dist-upgrade -y && \
     apt-get -yqq install --no-install-recommends \
@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/var/lib/apt/lists \
 FROM common_base AS build_tds
 ARG DEBIAN_FRONTEND=noninteractive
 ARG JAVA_VERSION
-RUN --mount=type=cache,target=/var/lib/apt/lists \
+RUN --mount=type=cache,sharing=private,target=/var/lib/apt/lists \
     apt-get update && \
     apt-get -yqq install --no-install-recommends \
       openjdk-${JAVA_VERSION}-jdk-headless \
@@ -54,7 +54,7 @@ ENV CATALINA_OPTS="--add-exports java.base/jdk.internal.ref=ALL-UNNAMED --add-ex
     CATALINA_HOME=/usr/local/tomcat \
     PATH=/usr/local/tomcat/bin:$PATH
 COPY .docker/tomcat/. /
-RUN --mount=type=cache,target=/var/lib/apt/lists \
+RUN --mount=type=cache,sharing=private,target=/var/lib/apt/lists \
     apt-get update && \
     apt-get -yqq install --no-install-recommends \
       gnupg \
