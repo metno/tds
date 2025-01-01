@@ -1,63 +1,77 @@
-ARG ALPINE_VERSION=3.18.3
-ARG UBUNTU_VERSION=22.04
+ARG UBUNTU_VERSION=24.04
+ARG JAVA_VERSION=17
+ARG TOMCAT_VERSION=10.1.34
 
-FROM docker.io/ubuntu:${UBUNTU_VERSION} as build
-# Build thredds
+FROM docker.io/ubuntu:${UBUNTU_VERSION} AS common_base
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get dist-upgrade -y
-RUN apt-get -yq install -yq --no-install-recommends \
-      openjdk-11-jdk-headless \
+ARG JAVA_VERSION
+RUN --mount=type=cache,target=/var/lib/apt/lists \
+    apt-get update && \
+    apt-get dist-upgrade -y && \
+    apt-get -yqq install --no-install-recommends \
+      curl \
+      dumb-init \
+      fontconfig \
+      fontconfig \
+      fonts-dejavu \
+      libnetcdf-dev \
+      libtcnative-1 \
+      netcdf-bin \
+      openjdk-${JAVA_VERSION}-jre-headless \
+      openssl \
+      tzdata \
+    && apt-get clean && \
+    ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime && \
+    ln -sf /usr/bin/bash /bin/sh   # For bash substring manipulation
+
+FROM common_base AS build_tds
+ARG DEBIAN_FRONTEND=noninteractive
+ARG JAVA_VERSION
+RUN --mount=type=cache,target=/var/lib/apt/lists \
+    apt-get update && \
+    apt-get -yqq install --no-install-recommends \
+      openjdk-${JAVA_VERSION}-jdk-headless \
       unzip \
-    && mkdir /usr/local/tomcat
+    && apt-get clean
+COPY build.gradle .
+RUN eval $(cat build.gradle | grep gradleVersion | sed -e 's/ //g' | awk '{print "export " $0}') && curl -qsS -o /tmp/gradle.zip -L https://services.gradle.org/distributions/gradle-${gradleVersion}-bin.zip
+RUN mkdir /opt/gradle && unzip -d /opt/gradle /tmp/gradle.zip
+RUN ln -s /opt/gradle/* /opt/gradle/current
 COPY . /src
 WORKDIR /src
 RUN cp -a /src/.docker/thredds/. /
-RUN ./gradlew assemble
-RUN mv ./build/downloads/thredds*.war thredds.war
+RUN /opt/gradle/current/bin/gradle assemble --no-daemon
 RUN mkdir -p /usr/local/tomcat/webapps/thredds
-RUN unzip -d /usr/local/tomcat/webapps/thredds thredds.war
+RUN unzip -d /usr/local/tomcat/webapps/thredds ./build/downloads/thredds*.war
 RUN mkdir -p /usr/local/tomcat/content
 RUN chmod 777 /usr/local/tomcat/content
 
-FROM docker.io/alpine:${ALPINE_VERSION}
-# Build tomcat
-ARG TOMCAT_MAJOR=9
-ARG TOMCAT_VERSION=9.0.80
-ENV CATALINA_OPTS="--illegal-access=permit --add-exports java.base/jdk.internal.ref=ALL-UNNAMED" \
-    JAVA_OPTS="-server -Djava.awt.headless=true -Djava.util.prefs.systemRoot=/usr/local/tomcat/.java -Djava.util.prefs.userRoot=/usr/local/tomcat/.java/.userPrefs" \
+FROM common_base AS tomcat
+ARG DEBIAN_FRONTEND=noninteractive
+ARG TOMCAT_VERSION
+ENV CATALINA_OPTS="--add-exports java.base/jdk.internal.ref=ALL-UNNAMED --add-exports java.base/sun.nio.ch=ALL-UNNAMED --add-exports jdk.unsupported/sun.misc=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED --add-opens jdk.compiler/com.sun.tools.javac=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED" \
+    JAVA_OPTS="-server -Djava.awt.headless=true -Djava.util.prefs.systemRoot=/usr/local/tomcat/.java -Djava.util.prefs.userRoot=/usr/local/tomcat/.java/.userPrefs -XX:+HeapDumpOnOutOfMemoryError" \
     CATALINA_HOME=/usr/local/tomcat \
-    PATH=/usr/local/tomcat/bin:$PATH \
-    TIMEZONE=UTC
+    PATH=/usr/local/tomcat/bin:$PATH
 COPY .docker/tomcat/. /
-RUN apk update && \
-    apk upgrade && \
-    apk add \
-      curl \
+RUN --mount=type=cache,target=/var/lib/apt/lists \
+    apt-get update && \
+    apt-get -yqq install --no-install-recommends \
       gnupg \
-      dumb-init \
-      fontconfig \
-      openjdk11-jre \
-      openssl \
-      netcdf-dev \
-      netcdf-utils \
-      tomcat-native \
-      ttf-dejavu \
-      tzdata \
-    && \
-    cp /usr/share/zoneinfo/${TIMEZONE} /etc/localtime && \
-    echo "${TIMEZONE}" > /etc/timezone && \
-    mkdir -p "/usr/local/tomcat" && cd /usr/local/tomcat && gpg --import < /usr/share/tomcat/9.keys && \
+    && apt-get clean && \
+    mkdir -p "/usr/local/tomcat" && \
+    cd /usr/local/tomcat && \
+    gpg --import < /usr/share/tomcat/${TOMCAT_VERSION//.*}.keys && \
     set -x && \
-    export TOMCAT_TGZ_URL="https://www.apache.org/dist/tomcat/tomcat-$TOMCAT_MAJOR/v$TOMCAT_VERSION/bin/apache-tomcat-$TOMCAT_VERSION.tar.gz" && \
-    curl -fSL "$TOMCAT_TGZ_URL" -o tomcat.tar.gz && \
-    curl -fSL "$TOMCAT_TGZ_URL.asc" -o tomcat.tar.gz.asc && \
+    export TOMCAT_TGZ_URL="https://www.apache.org/dist/tomcat/tomcat-${TOMCAT_VERSION//.*}/v$TOMCAT_VERSION/bin/apache-tomcat-$TOMCAT_VERSION.tar.gz" && \
+    curl -qsfSL "$TOMCAT_TGZ_URL" -o tomcat.tar.gz && \
+    curl -qsfSL "$TOMCAT_TGZ_URL.asc" -o tomcat.tar.gz.asc && \
     gpg --verify tomcat.tar.gz.asc && \
     tar -xvf tomcat.tar.gz --strip-components=1 && \
     rm bin/*.bat && \
     rm tomcat.tar.gz* && \
     mkdir -p conf/Catalina/localhost && \
-    apk del \
+    apt-get -yqq remove \
       gnupg \
     && \
     mkdir -p /usr/local/tomcat/.java/.systemPrefs && \
@@ -67,13 +81,13 @@ RUN apk update && \
     chmod a+rX -R /usr/local/tomcat && \
     for SUBDIR in logs work temp; do mkdir -p /usr/local/tomcat/${SUBDIR} && chmod a+rwX -R /usr/local/tomcat/${SUBDIR}; done && \
     rm -rf /usr/local/tomcat/webapps/* && \
-    cp -a /usr/share/tomcat/* /usr/local/tomcat/ && \
-    rm -rf /var/cache/apk/*
+    cp -a /usr/share/tomcat/* /usr/local/tomcat/
 WORKDIR /usr/local/tomcat
 USER 65534:65534
-EXPOSE 8080 8443
+EXPOSE 8080/tcp
+EXPOSE 8443/tcp
 CMD ["/usr/bin/dumb-init", "--", "/usr/local/tomcat/bin/catalina.sh", "run"]
 
-# Add tds
-COPY --from=build /usr/local/tomcat/. /usr/local/tomcat/
+FROM tomcat AS tds
 ENV JAVA_OPTS="${JAVA_OPTS} -Dtds.content.root.path=/usr/local/tomcat/content"
+COPY --from=build_tds /usr/local/tomcat/. /usr/local/tomcat/
