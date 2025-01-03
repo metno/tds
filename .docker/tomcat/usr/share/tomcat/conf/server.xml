@@ -7,6 +7,11 @@
   <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
 
   <Service name="Catalina">
+    <Connector port="8080" protocol="HTTP/1.1"
+               maxThreads="5000" scheme="http"
+               relaxedPathChars='[]|'
+               relaxedQueryChars='[]:|{}^&#x5c;&#x60;&quot;&lt;&gt;'
+               clientAuth="false" />
     <Connector port="8443" protocol="HTTP/1.1"
                maxThreads="5000" scheme="https" secure="true"
                relaxedPathChars='[]|'
